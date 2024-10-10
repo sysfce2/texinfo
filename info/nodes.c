@@ -742,6 +742,8 @@ info_load_file (char *fullpath, int is_subfile)
       *p = '\0';
   }
   file_buffer->finfo = finfo;
+  /* NOTE conversion from size_t to long here to be sure that comparisons with
+     node and search length are always safe. */
   file_buffer->filesize = filesize;
   file_buffer->contents = contents;
   if (compressed)
@@ -856,13 +858,18 @@ static void
 info_reload_file_buffer_contents (FILE_BUFFER *fb)
 {
   int is_compressed;
+  size_t filesize;
 
   fb->flags &= ~N_IsCompressed;
 
   /* Let the filesystem do all the work for us. */
   fb->contents =
-    filesys_read_info_file (fb->fullpath, &(fb->filesize), &(fb->finfo),
+    filesys_read_info_file (fb->fullpath, &filesize, &(fb->finfo),
                             &is_compressed);
+  /* NOTE conversion from size_t to long here to be sure that comparisons with
+     node and search length are always safe. */
+  fb->filesize = filesize;
+
   if (is_compressed)
     fb->flags |= N_IsCompressed;
 }
@@ -917,7 +924,7 @@ info_create_node (void)
 static size_t
 get_node_length (SEARCH_BINDING *binding)
 {
-  size_t i;
+  long i;
   char *body;
 
   /* [A node] ends with either a ^_, a ^L, or end of file.  */
@@ -1109,10 +1116,10 @@ info_get_node_of_file_buffer (FILE_BUFFER *file_buffer, char *nodename)
 
 /* Find the actual starting memory location of NODE.  Because of the
    way that tags are implemented, the physical nodestart may
-   not actually be where the tag says it is.  If that is the case,
-   set N_UpdateTags in NODE->flags.  If the node is found, return non-zero.
+   not actually be where the tag says it is.
    Set NODE->nodestart_adjusted directly on the separator that precedes this 
-   node.  If the node could not be found, return 0. */
+   node.  If the node is found, return non-zero.  If the node could not be
+   found, return 0. */
 static int
 adjust_nodestart (FILE_BUFFER *fb, TAG *node)
 {
@@ -1164,11 +1171,6 @@ adjust_nodestart (FILE_BUFFER *fb, TAG *node)
       /* If the node still couldn't be found, we lose big. */
       if (position == -1)
         return 0;
-
-      /* Set the flag in NODE->flags to say that the the tags table could
-         need updating (if we used a tag to get here, that is). */
-      if (node->flags & N_HasTagsTable)
-        node->flags |= N_UpdateTags;
     }
 
   node->nodestart_adjusted = s.buffer + position - fb->contents;
@@ -1345,9 +1347,10 @@ info_node_of_tag_ext (FILE_BUFFER *fb, TAG **tag_ptr, int fast)
       /* Otherwise an anchor at the end of a node ends up displaying at
          the end of the last line of the node (way over on the right of
          the screen), which looks wrong.  */
-      if (node->display_pos >= (unsigned long) node->nodelen)
+      if (node->display_pos >= node->nodelen)
         node->display_pos = node->nodelen - 1;
-      else if (node->display_pos < 0)
+
+      if (node->display_pos < 0)
         node->display_pos = 0; /* Shouldn't happen. */
     }
 

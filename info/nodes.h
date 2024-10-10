@@ -56,10 +56,8 @@ typedef struct {
 /* Values for NODE.flags or FILE_BUFFER.flags. */
 #define N_HasTagsTable 0x01     /* This node was found through a tags table. */
 #define N_TagsIndirect 0x02     /* The tags table was an indirect one. */
-#define N_UpdateTags   0x04     /* The tags table is out of date. */
 #define N_IsCompressed 0x08     /* The file is compressed on disk. */
 #define N_IsInternal   0x10     /* This node was made by Info. */
-#define N_CannotGC     0x20     /* File buffer cannot be gc'ed. */
 #define N_IsManPage    0x40     /* This node is a manpage. */
 #define N_WasRewritten 0x100    /* NODE->contents can be passed to free(). */ 
 #define N_IsIndex      0x200    /* An index node. */
@@ -119,7 +117,8 @@ typedef struct {
   char *fullpath;               /* The full pathname of this info file. */
   struct stat finfo;            /* Information about this file. */
   char *contents;               /* The contents of this particular file. */
-  size_t filesize;              /* The number of bytes this file expands to. */
+  long filesize;                /* The number of bytes this file expands to.
+                                   Should not be negative */
   char **subfiles;              /* If non-null, the list of subfiles. */
   TAG **tags;                   /* If non-null, the tags table. */
   size_t tags_slots;            /* Number of slots allocated for TAGS. */

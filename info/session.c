@@ -1245,7 +1245,7 @@ void info_prev_line (WINDOW *, int count);
 static void
 move_to_goal_column (WINDOW *window)
 {
-  long goal;
+  size_t goal;
 
   goal = window->goal_column;
   if (goal >= window->line_map.used)
@@ -1773,10 +1773,6 @@ gc_file_buffers_and_nodes (void)
              gc it.  This means that the user-variable "gc-compressed-files"
              is non-zero. */
           if ((fb->flags & N_IsCompressed) && !gc_compressed_files)
-            continue;
-
-          /* If this file's contents are not gc-able, move on. */
-          if (fb->flags & N_CannotGC)
             continue;
 
           /* Don't free file buffers corresponding to files that aren't there 
@@ -2399,8 +2395,8 @@ info_menu_or_ref_item (WINDOW *window, int menu_item, int xref, int ask_p)
            more than one label which matches, find the one that's
            closest to point.  */
         {
-          register int i;
-          int best = -1, min_dist = window->node->nodelen;
+          register long i;
+          long best = -1, min_dist = window->node->nodelen;
           REFERENCE *ref;
 
           for (i = 0; refs && (ref = refs[i]); i++)
@@ -2411,7 +2407,7 @@ info_menu_or_ref_item (WINDOW *window, int menu_item, int xref, int ask_p)
                 {
                   /* ref->end is more accurate estimate of position
                      for menus than ref->start.  Go figure.  */
-                  int dist = abs (window->point - ref->end);
+                  long dist = labs (window->point - ref->end);
 
                   if (dist < min_dist)
                     {
@@ -4254,6 +4250,9 @@ static int
 ask_for_search_string (int case_sensitive, int use_regex, int direction)
 {
   char *line, *prompt;
+  /* convert int to size_t for comparison with string length.  Bogus
+    values obtained with negative values should not be a concern. */
+  size_t min_length = min_search_length;
 
   if (search_string)
     xasprintf (&prompt, _("%s%s%s [%s]: "),
@@ -4280,7 +4279,7 @@ ask_for_search_string (int case_sensitive, int use_regex, int direction)
       return 1;
     }
 
-  if (mbslen (line) < min_search_length)
+  if (mbslen (line) < min_length)
     {
       info_error ("%s", _("Search string too short"));
       free (line);
